@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>World Manifest — Country Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0F1B2D;
+    --panel: #16263D;
+    --panel-edge: #233857;
+    --paper: #ECE6D6;
+    --paper-dim: #B8C4CE;
+    --amber: #E8B04B;
+    --steel: #5FA8D3;
+    --line: rgba(236, 230, 214, 0.14);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(95,168,211,0.08), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(232,176,75,0.06), transparent 40%);
+  }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 28px;
+    margin-bottom: 32px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    margin-top: 12px;
+    color: var(--paper-dim);
+    max-width: 540px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ---------- Controls (ledger bar) ---------- */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+    align-items: stretch;
+  }
+
+  .controls input[type="text"],
+  .controls select {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    color: var(--paper);
+    padding: 14px 16px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .controls input[type="text"] {
+    flex: 1 1 260px;
+  }
+
+  .controls select {
+    flex: 0 0 200px;
+    cursor: pointer;
+  }
+
+  .controls input::placeholder { color: var(--paper-dim); }
+
+  .controls input:focus,
+  .controls select:focus {
+    border-color: var(--amber);
+  }
+
+  .result-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--paper-dim);
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+  }
+
+  .result-count strong { color: var(--amber); }
+
+  /* ---------- States ---------- */
+  .state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--paper-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+  }
+
+  .state.error { color: #E8865A; }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--panel-edge);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    margin: 0 auto 18px;
+    animation: spin 0.9s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .retry-btn {
+    margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    border: 1px solid #E8865A;
+    color: #E8865A;
+    padding: 10px 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .retry-btn:hover { background: #E8865A; color: var(--ink); }
+
+  /* ---------- Card grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-3px) rotate(-0.4deg);
+    border-color: var(--amber);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .stamp {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px dashed var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--ink);
+  }
+
+  .stamp img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .card-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .card-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--steel);
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+  }
+
+  .card-meta {
+    font-size: 13px;
+    color: var(--paper-dim);
+    line-height: 1.7;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+  }
+
+  .card-meta b { color: var(--paper); font-weight: 600; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--paper-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    grid-column: 1 / -1;
+  }
+
+  footer {
+    margin-top: 60px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--paper-dim);
+    letter-spacing: 0.05em;
+  }
+
+  footer a { color: var(--steel); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">REST Countries API · Live Feed</div>
+      <h1>World Manifest</h1>
+      <p>A running ledger of every country on file — search by name or filter by region to inspect population, capital, and territory details pulled live from the registry.</p>
+    </header>
+
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="Search by country name…" autocomplete="off" />
+      <select id="regionSelect">
+        <option value="">All regions</option>
+        <option value="Africa">Africa</option>
+        <option value="Americas">Americas</option>
+        <option value="Asia">Asia</option>
+        <option value="Europe">Europe</option>
+        <option value="Oceania">Oceania</option>
+        <option value="Antarctic">Antarctic</option>
+      </select>
+    </div>
+
+    <div id="resultCount" class="result-count" hidden></div>
+
+    <div id="content">
+      <div class="state" id="loadingState">
+        <div class="spinner"></div>
+        Reading the manifest…
+      </div>
+    </div>
+
+    <footer>
+      Data from <a href="https://restcountries.com" target="_blank" rel="noopener">restcountries.com</a> · Built with the Fetch API
+    </footer>
+  </div>
+
+<script>
+  const API_URL = "https://restcountries.com/v3.1/all?fields=name,capital,region,subregion,population,flags,cca3";
+
+  const contentEl = document.getElementById('content');
+  const searchInput = document.getElementById('searchInput');
+  const regionSelect = document.getElementById('regionSelect');
+  const resultCount = document.getElementById('resultCount');
+
+  let allCountries = [];
+
+  async function loadCountries() {
+    contentEl.innerHTML = `
+      <div class="state" id="loadingState">
+        <div class="spinner"></div>
+        Reading the manifest…
+      </div>`;
+    resultCount.hidden = true;
+
+    try {
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      allCountries = data
+        .map(c => ({
+          name: c.name?.common ?? 'Unknown',
+          official: c.name?.official ?? '',
+          capital: (c.capital && c.capital.length) ? c.capital.join(', ') : '—',
+          region: c.region || 'Unknown',
+          subregion: c.subregion || '—',
+          population: c.population ?? 0,
+          flag: c.flags?.svg || c.flags?.png || '',
+          code: c.cca3 || ''
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      render();
+    } catch (err) {
+      contentEl.innerHTML = `
+        <div class="state error">
+          ⚠ Could not load the manifest.<br />
+          ${escapeHtml(err.message)}
+          <br />
+          <button class="retry-btn" id="retryBtn">Retry</button>
+        </div>`;
+      document.getElementById('retryBtn').addEventListener('click', loadCountries);
+    }
+  }
+
+  function render() {
+    const query = searchInput.value.trim().toLowerCase();
+    const region = regionSelect.value;
+
+    const filtered = allCountries.filter(c => {
+      const matchesQuery = !query || c.name.toLowerCase().includes(query);
+      const matchesRegion = !region || c.region === region;
+      return matchesQuery && matchesRegion;
+    });
+
+    resultCount.hidden = false;
+    resultCount.innerHTML = `Showing <strong>${filtered.length}</strong> of ${allCountries.length} entries`;
+
+    if (filtered.length === 0) {
+      contentEl.innerHTML = `<div class="empty">No countries match that search. Try a different name or region.</div>`;
+      return;
+    }
+
+    contentEl.innerHTML = `<div class="grid">${filtered.map(cardHtml).join('')}</div>`;
+  }
+
+  function cardHtml(c) {
+    return `
+      <div class="card">
+        <div class="card-top">
+          <div class="stamp">
+            ${c.flag ? `<img src="${c.flag}" alt="Flag of ${escapeHtml(c.name)}" loading="lazy" />` : ''}
+          </div>
+          <div>
+            <div class="card-name">${escapeHtml(c.name)}</div>
+            <div class="card-code">${escapeHtml(c.code)}</div>
+          </div>
+        </div>
+        <div class="card-meta">
+          <div><b>Capital</b> · ${escapeHtml(c.capital)}</div>
+          <div><b>Region</b> · ${escapeHtml(c.region)} (${escapeHtml(c.subregion)})</div>
+          <div><b>Population</b> · ${c.population.toLocaleString()}</div>
+        </div>
+      </div>`;
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  searchInput.addEventListener('input', () => {
+    if (allCountries.length) render();
+  });
+  regionSelect.addEventListener('change', () => {
+    if (allCountries.length) render();
+  });
+
+  loadCountries();
+</script>
+</body>
+</html>
