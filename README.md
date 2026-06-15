@@ -70,3 +70,8 @@ repository deliverable.
 
 Just open `index.html` in a browser — no server required, since the API
 is called directly over HTTPS and supports CORS.
+🚀 Live Demo
+🔗 Live Website: 
+
+📂 GitHub Repository
+🔗 Source Code:
